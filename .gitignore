@@ -1,0 +1,10 @@
+.env
+
+# Added by cargo
+
+/target
+
+.idea
+**/*.http
+volumes/db/data
+volumes/storage
