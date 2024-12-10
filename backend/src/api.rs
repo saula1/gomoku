@@ -527,6 +527,8 @@ async fn websocket(stream: WebSocket, state: Arc<AppState>, room_id: String) {
         _ = &mut recv_task => send_task.abort(),
     };
 
+    let mut should_close_game = false;
+
     {
         let game = state.db.get_active_game_for_room(&room_id).await;
         if game.is_ok() {
@@ -536,6 +538,9 @@ async fn websocket(stream: WebSocket, state: Arc<AppState>, room_id: String) {
 
                 if let Some(room) = rooms.get_mut(&room_id) {
                     room.users.remove(&user_id);
+                    if room.users.is_empty() {
+                        should_close_game = true;
+                    }
                     tracing::info!(?game.x, ?game.o, ?user_id);
 
                     if game.x == Some(user_id) || game.o == Some(user_id) {
@@ -573,13 +578,20 @@ async fn websocket(stream: WebSocket, state: Arc<AppState>, room_id: String) {
                     }
                 }
             }
-            if matches!(
-                game.x_status,
-                PlayerStatus::Left | PlayerStatus::ConfirmedThenLeft
-            ) && (matches!(
-                game.o_status,
-                PlayerStatus::Left | PlayerStatus::ConfirmedThenLeft
-            ) || matches!(game.game_type, GameType::Bot))
+
+            if should_close_game
+                || (matches!(game.game_type, GameType::Bot)
+                    && matches!(
+                        game.x_status,
+                        PlayerStatus::Left | PlayerStatus::ConfirmedThenLeft
+                    ))
+                || (matches!(
+                    game.x_status,
+                    PlayerStatus::Left | PlayerStatus::ConfirmedThenLeft
+                ) && matches!(
+                    game.o_status,
+                    PlayerStatus::Left | PlayerStatus::ConfirmedThenLeft
+                ))
             {
                 tracing::info!("Game ended");
                 game.status = GameStatus::Ended;

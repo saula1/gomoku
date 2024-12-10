@@ -63,8 +63,8 @@ impl Game {
             winner: None,
             next_player,
             moves: vec![],
-            x_status: PlayerStatus::Ready,
-            o_status: PlayerStatus::Ready,
+            x_status: PlayerStatus::Left,
+            o_status: PlayerStatus::Left,
             room_id,
             status: match game_type {
                 GameType::Bot => GameStatus::Playing,
